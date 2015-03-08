@@ -1,70 +1,79 @@
-// the semi-colon before function invocation is a safety net against concatenated
-// scripts and/or other plugins which may not be closed properly.
-;(function($, window, document, undefined) {
-    "use strict";
-
-    // undefined is used here as the undefined global variable in ECMAScript 3 is
-    // mutable (ie. it can be changed by someone else). undefined isn't really being
-    // passed in so we can ensure the value of it is truly undefined. In ES5, undefined
-    // can no longer be modified.
-    // window and document are passed through as local variable rather than global
-    // as this (slightly) quickens the resolution process and can be more efficiently
-    // minified (especially when both are regularly referenced in your plugin).
-
-    // Create the defaults once
-    var pluginName = "responsiveImage",
-        defaults = {
-            sizes: {
-                small: 480,
-                medium: 767,
-                large: 1200
-            },
-            suffixes: {
-                small: '-small',
-                medium: '-medium',
-                large: '-large',
-                retina: '-retina'
-            }
+// Returns a function, that, as long as it continues to be invoked, will not
+// be triggered. The function will be called after it stops being called for
+// N milliseconds. If `immediate` is passed, trigger the function on the
+// leading edge, instead of the trailing.
+function debounce(func, wait, immediate) {
+    var timeout;
+    return function() {
+        var context = this, args = arguments;
+        var later = function() {
+            timeout = null;
+            if (!immediate) func.apply(context, args);
         };
+        var callNow = immediate && !timeout;
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+        if (callNow) func.apply(context, args);
+    };
+};
 
-    // The actual plugin constructor
-    function Plugin(element, options) {
-        this.element = element;
-        // jQuery has an extend method which merges the contents of two or
-        // more objects, storing the result in the first object. The first object
-        // is generally empty as we don't want to alter the default options for
-        // future instances of the plugin
-        this.settings = $.extend({}, defaults, options);
-        this._defaults = defaults;
-        this._name = pluginName;
-        this.init();
+
+var breakpointImage = function(target) {
+    var source,
+        sourceString,
+        folder,
+        imageSource,
+        imageName,
+        imageExtension,
+        isBackground;
+
+    // Different variables based on element type.
+    if ($(target).is('img')){
+        source = 'src';
+        sourceString = $(target).attr(source);
+        isBackground = false;
+    } else {
+        source = 'style';
+        sourceString = $(target).attr(source).match(/'([^']+)'/)[1];
+        isBackground = true;
+    }
+    
+    // Split source into logical chunks
+    folder = sourceString.substring(0, sourceString.lastIndexOf('/') + 1);
+    imageSource = sourceString.substring(sourceString.lastIndexOf('/') + 1, sourceString.length);
+    imageName = imageSource.substring(0, imageSource.lastIndexOf('-') + 1);
+    imageExtension = '.' + imageSource.substring(imageSource.lastIndexOf('.') + 1);
+    
+    // Replace the image source, depending on element type.
+    var setImage = function(size){
+        if (isBackground == false){
+            $(target).attr(source, folder + imageName + size + imageExtension);
+        } else {
+            $(target).attr(source, "background-image: url('" + folder + imageName + size + imageExtension + "');");
+        }
     }
 
-    // Avoid Plugin.prototype conflicts
-    $.extend(Plugin.prototype, {
-        init: function() {
-            // Place initialization logic here
-            // You already have access to the DOM element and
-            // the options via the instance, e.g. this.element
-            // and this.settings
-            // you can add more functions like the one below and
-            // call them like so: this.yourOtherFunction(this.element, this.settings).
-            console.log(this._defaults);
-            console.log(this.settings);
-            console.log(this._name);
-        },
-        yourOtherFunction: function() {
-            // some logic
+    // Modernizr media queries, which trigger setImage and take the image suffix as a variable.
+    var checkWidth = function() {
+        if (Modernizr.mq('only screen and (max-width: 480px)')) {
+            setImage('small')
+        } else if (Modernizr.mq('only screen and (min-width: 767px) and (max-width: 992px)')) {
+            setImage('medium')
+        } else if (Modernizr.mq('only screen and (min-width: 992px) and (max-width: 1200px)')) {
+            setImage('desktop')
+        } else if (Modernizr.mq('only screen and (min-width: 1200px)')) {
+            setImage('large')
         }
-    });
+    }
 
-    // A really lightweight plugin wrapper around the constructor,
-    // preventing against multiple instantiations
-    $.fn[pluginName] = function(options) {
-        return this.each(function() {
-            if (!$.data(this, "plugin_" + pluginName)) {
-                $.data(this, "plugin_" + pluginName, new Plugin(this, options));
-            }
-        });
-    };
-})(jQuery, window, document);
+    // Trigger the media queries on initialisation.
+    checkWidth();
+
+    // Debounce on window resize and trigger the image to be swapped.
+    var imageSwitch = debounce(function(){
+        checkWidth();
+    }, 150);
+
+    window.addEventListener('resize', imageSwitch);
+
+}

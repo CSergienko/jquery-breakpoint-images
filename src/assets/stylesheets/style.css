@@ -1,0 +1,13 @@
+/* line 4, ../sass/style.scss */
+.demo-image-bg {
+  padding-top: 56.25%;
+  width: 100%;
+  background-position: 50%;
+  background-size: cover;
+  margin-bottom: 20px;
+}
+
+/* line 12, ../sass/style.scss */
+.demo-image-img {
+  max-width: 100%;
+}
