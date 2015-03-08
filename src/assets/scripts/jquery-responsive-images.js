@@ -27,53 +27,56 @@ var breakpointImage = function(target) {
         imageExtension,
         isBackground;
 
-    // Different variables based on element type.
-    if ($(target).is('img')){
-        source = 'src';
-        sourceString = $(target).attr(source);
-        isBackground = false;
-    } else {
-        source = 'style';
-        sourceString = $(target).attr(source).match(/'([^']+)'/)[1];
-        isBackground = true;
+    if($(target).length){
+        $(target).each(function() {
+            // Different variables based on element type.
+            if ($(target).is('img')){
+                source = 'src';
+                sourceString = $(target).attr(source);
+                isBackground = false;
+            } else {
+                source = 'style';
+                sourceString = $(target).attr(source).match(/'([^']+)'/)[1];
+                isBackground = true;
+            }
+            
+            // Split source into logical chunks
+            folder = sourceString.substring(0, sourceString.lastIndexOf('/') + 1);
+            imageSource = sourceString.substring(sourceString.lastIndexOf('/') + 1, sourceString.length);
+            imageName = imageSource.substring(0, imageSource.lastIndexOf('-') + 1);
+            imageExtension = '.' + imageSource.substring(imageSource.lastIndexOf('.') + 1);
+            
+            // Replace the image source, depending on element type.
+            var setImage = function(size){
+                if (isBackground == false){
+                    $(target).attr(source, folder + imageName + size + imageExtension);
+                } else {
+                    $(target).attr(source, "background-image: url('" + folder + imageName + size + imageExtension + "');");
+                }
+            }
+
+            // Modernizr media queries, which trigger setImage and take the image suffix as a variable.
+            var checkWidth = function() {
+                if (Modernizr.mq('only screen and (max-width: 480px)')) {
+                    setImage('small')
+                } else if (Modernizr.mq('only screen and (min-width: 767px) and (max-width: 992px)')) {
+                    setImage('medium')
+                } else if (Modernizr.mq('only screen and (min-width: 992px) and (max-width: 1200px)')) {
+                    setImage('desktop')
+                } else if (Modernizr.mq('only screen and (min-width: 1200px)')) {
+                    setImage('large')
+                }
+            }
+
+            // Trigger the media queries on initialisation.
+            checkWidth();
+
+            // Debounce on window resize and trigger the image to be swapped.
+            var imageSwitch = debounce(function(){
+                checkWidth();
+            }, 150);
+
+            window.addEventListener('resize', imageSwitch);
+        });
     }
-    
-    // Split source into logical chunks
-    folder = sourceString.substring(0, sourceString.lastIndexOf('/') + 1);
-    imageSource = sourceString.substring(sourceString.lastIndexOf('/') + 1, sourceString.length);
-    imageName = imageSource.substring(0, imageSource.lastIndexOf('-') + 1);
-    imageExtension = '.' + imageSource.substring(imageSource.lastIndexOf('.') + 1);
-    
-    // Replace the image source, depending on element type.
-    var setImage = function(size){
-        if (isBackground == false){
-            $(target).attr(source, folder + imageName + size + imageExtension);
-        } else {
-            $(target).attr(source, "background-image: url('" + folder + imageName + size + imageExtension + "');");
-        }
-    }
-
-    // Modernizr media queries, which trigger setImage and take the image suffix as a variable.
-    var checkWidth = function() {
-        if (Modernizr.mq('only screen and (max-width: 480px)')) {
-            setImage('small')
-        } else if (Modernizr.mq('only screen and (min-width: 767px) and (max-width: 992px)')) {
-            setImage('medium')
-        } else if (Modernizr.mq('only screen and (min-width: 992px) and (max-width: 1200px)')) {
-            setImage('desktop')
-        } else if (Modernizr.mq('only screen and (min-width: 1200px)')) {
-            setImage('large')
-        }
-    }
-
-    // Trigger the media queries on initialisation.
-    checkWidth();
-
-    // Debounce on window resize and trigger the image to be swapped.
-    var imageSwitch = debounce(function(){
-        checkWidth();
-    }, 150);
-
-    window.addEventListener('resize', imageSwitch);
-
 }
